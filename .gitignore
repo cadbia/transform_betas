@@ -1,1 +1,6 @@
-.xlsx
+# Excel workbooks
+*.xlsx
+
+# Excel temp/lock files
+~$*
+EOF
