@@ -1,6 +1,32 @@
-# Excel workbooks
+# Excel workbooks and temp files
 *.xlsx
-
-# Excel temp/lock files
+*.xls
 ~$*
-EOF
+
+# Output files
+standardized_betas.xlsx
+transformed_betas.xlsx
+expected_transformed_betas.xlsx
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.so
+
+# Virtual environments
+venv/
+env/
+.venv/
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
