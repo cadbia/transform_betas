@@ -1,6 +1,4 @@
-# Beta Transformation Script
-
-A lightweight Python script that processes large Excel datasets of raw beta values, standardizes them using Excel’s `STDEV.S` formula, and transforms them into scaled percentiles that match Excel’s `PERCENTRANK.EXC` logic. Outputs are rounded to **nine decimal places** by default.
+# Transform Betas Script
 
 ## 📂 Repository Structure
 
@@ -100,7 +98,7 @@ Follow these steps to get up and running:
 
     The script expects:
     -   **File name:** `raw_betas.xlsx`
-    -   **Sheet name:** `RawBetas`
+    -   **Sheet name:** `Sheet1`
 
     The Excel file must follow this format:
 
@@ -122,25 +120,70 @@ Once everything is set up and your `raw_betas.xlsx` file is in place, run the sc
 python transform_betas.py
 ```
 
-### 🔄 What the Script Does
+## What it does
+1. Reads an Excel file of raw betas (default: `raw_betas.xlsx`, sheet `Sheet1`).
+2. Treats the first two columns as metadata (e.g., Ticker, Name); remaining columns are numeric betas.
+3. Standardizes each beta column using Excel-style z-scores: (x - mean) / STDEV.S (ddof=1).
+4. Computes Excel-like PERCENTRANK.EXC percentiles across the global distribution of all standardized values (interpolated, with proper min/max handling).
+5. Applies linear transform: (percentile*100 - 50.5) / 34.0.
+6. Writes one output workbook with two sheets:
+   - StandardizedBetas
+   - TransformedBetas
+7. Performs a validation report (counts blank cells).
 
-1.  Reads the `raw_betas.xlsx` Excel file from the `RawBetas` sheet.
-2.  Standardizes each beta column using Excel’s `STDEV.S` logic:
-    ```
-    standardized = (x – mean) / STDEV.S
-    ```
-3.  Flattens all standardized values and sorts them for percentile ranking.
-4.  Calculates percentiles using a replication of Excel’s `PERCENTRANK.EXC` function:
-    ```
-    percentile = ROUND(rank / (N + 1) – 0.0005, 9)
-    ```
-5.  Transforms the percentile to a scaled score using:
-    ```
-    transformed = (percentile * 100 – 50.5) / 34
-    ```
-6.  Outputs two Excel files:
-    -   `standardized_betas.xlsx` — contains metadata + standardized Z-scores
-    -   `transformed_betas2.xlsx` — contains metadata + percentile-transformed scores
-7.  Prints total execution time in minutes and seconds to the console.
+## File naming
+Output file name: `{OUTPUT_PREFIX}_{DATE}.xlsx`  
+`OUTPUT_PREFIX` is defined near the top of `transform_betas.py` (default: `transformed_factor_betas`).  
+`DATE` is auto-extracted from the input filename if it contains one of:
+- `YYYYMMDD` (e.g. `raw_betas_20250707.xlsx`)
+- `YYYY-MM-DD` or `YYYY_MM_DD`
+- `MM-DD-YYYY` or `MM_DD_YYYY`
 
-✅ After successful execution, both output Excel files will appear in the same directory as the script.
+If no date pattern is found, the script uses the input file's modified date; if that fails, today’s date.
+
+## Quick start
+1. Place `raw_betas.xlsx` in the project root (or adjust `INPUT_FILE`).
+2. Ensure first two columns are metadata; all remaining columns must be numeric (NaN allowed).
+3. Install dependencies:
+   ```bash
+   pip install pandas numpy openpyxl
+   ```
+4. Run:
+   ```bash
+   python transform_betas.py
+   ```
+5. Check created file: `transformed_factor_betas_YYYYMMDD.xlsx`.
+
+## Adjusting inputs
+Edit these constants at the top of `transform_betas.py`:
+```python
+INPUT_FILE = "raw_betas.xlsx"
+INPUT_SHEET = "Sheet1"
+OUTPUT_PREFIX = "transformed_factor_betas"
+```
+
+## Validation output
+Example console summary:
+```
+Reading input: raw_betas_2025-07-07.xlsx (sheet='Sheet1')
+Output will be: transformed_factor_betas_20250707.xlsx
+Data validation:
+Original betas shape: (N, M)
+Standardized betas - blank cells: 0
+Transformed betas - blank cells: 0
+✓ All transformed beta cells are filled
+Processing complete. Output file: transformed_factor_betas_20250707.xlsx
+```
+If blanks appear in transformed data, their row indexes are listed.
+
+## Common reasons for blanks
+- Original column has all identical values (std = 0) → results become NaN.
+- Original cell was NaN (propagates through).
+
+## Troubleshooting
+- Wrong sheet name: update `INPUT_SHEET`.
+- No output file: verify script executed without exceptions.
+- Date tag not what you expect: ensure filename contains a supported date format.
+
+## License / reuse
+Internal use; adapt constants as needed.

@@ -1,5 +1,64 @@
 import pandas as pd
 import numpy as np
+import re
+from pathlib import Path
+from datetime import datetime
+
+# -----------------------------
+# File / naming configuration
+# -----------------------------
+# Input Excel file (first two cols = metadata, rest = betas)
+INPUT_FILE = "raw_betas.xlsx"
+# Sheet containing the raw betas
+INPUT_SHEET = "Sheet1"
+# Output filename prefix; a date tag (derived from input) will be appended
+OUTPUT_PREFIX = "transformed_factor_betas"
+
+def _extract_date_tag(path: Path) -> str:
+    """
+    Extract a date from the filename (preferred) or fallback to file mtime / today.
+    Recognized patterns inside the filename stem:
+      YYYYMMDD
+      YYYY-MM-DD
+      YYYY_MM_DD
+      MM-DD-YYYY
+      MM_DD_YYYY
+    Returns YYYYMMDD.
+    """
+    stem = path.stem
+    # Try YYYYMMDD
+    m = re.search(r"(20\d{2}[01]\d[0-3]\d)", stem)
+    if m:
+        raw = m.group(1)
+        try:
+            return datetime.strptime(raw, "%Y%m%d").strftime("%Y%m%d")
+        except ValueError:
+            pass
+    # Try YYYY[-_]MM[-_]DD
+    m = re.search(r"(20\d{2})[-_](\d{2})[-_](\d{2})", stem)
+    if m:
+        y, mo, d = m.groups()
+        try:
+            return datetime(int(y), int(mo), int(d)).strftime("%Y%m%d")
+        except ValueError:
+            pass
+    # Try MM[-_]DD[-_]YYYY
+    m = re.search(r"(\d{2})[-_](\d{2})[-_](20\d{2})", stem)
+    if m:
+        mo, d, y = m.groups()
+        try:
+            return datetime(int(y), int(mo), int(d)).strftime("%Y%m%d")
+        except ValueError:
+            pass
+    # Fallback: file modified time or today
+    try:
+        return datetime.fromtimestamp(path.stat().st_mtime).strftime("%Y%m%d")
+    except Exception:
+        return datetime.today().strftime("%Y%m%d")
+
+def _build_output_filename(input_file: str) -> str:
+    date_tag = _extract_date_tag(Path(input_file))
+    return f"{OUTPUT_PREFIX}_{date_tag}.xlsx"
 
 def excel_percentrank_exc(sorted_arr, x):
     """
@@ -34,7 +93,13 @@ def excel_percentrank_exc(sorted_arr, x):
 
 def main():
     # 1) Load data
-    df = pd.read_excel("raw_betas.xlsx", sheet_name="Sheet1")
+    input_path = Path(INPUT_FILE)
+    if not input_path.exists():
+        raise FileNotFoundError(f"Input file not found: {input_path}")
+    output_file = _build_output_filename(INPUT_FILE)
+    print(f"Reading input: {input_path.name} (sheet='{INPUT_SHEET}')")
+    print(f"Output will be: {output_file}")
+    df = pd.read_excel(input_path, sheet_name=INPUT_SHEET)
     meta = df.iloc[:, :2]            # ticker & name
     betas = df.iloc[:, 2:].astype(float)
 
@@ -61,7 +126,7 @@ def main():
     transformed = z.applymap(transform_exc)
 
     # 5) Write out both sheets
-    with pd.ExcelWriter("transformed_factor_betas_07_07_2025.xlsx", engine="openpyxl") as w:
+    with pd.ExcelWriter(output_file, engine="openpyxl") as w:
         pd.concat([meta, z], axis=1).to_excel(
             w, sheet_name="StandardizedBetas", index=False
         )
@@ -85,7 +150,7 @@ def main():
     else:
         print("✓ All transformed beta cells are filled")
     
-    print("Processing complete.")
+    print(f"Processing complete. Output file: {output_file}")
 
 if __name__ == "__main__":
     main()
