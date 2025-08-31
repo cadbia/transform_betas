@@ -187,3 +187,53 @@ If blanks appear in transformed data, their row indexes are listed.
 
 ## License / reuse
 Internal use; adapt constants as needed.
+
+# Transform Betas Streamlit App
+
+A simple Streamlit app to standardize and transform factor betas using Excel's PERCENTRANK.EXC semantics.
+
+Requirements
+- Python 3.8+
+- See `requirements.txt` for Python package dependencies.
+
+Run locally (recommended: virtual environment)
+
+1. Create and activate a venv in the project folder:
+
+```bash
+cd /Users/cadenbialow/Visual-Studio-Code/transform_betas
+python3 -m venv .venv
+source .venv/bin/activate
+```
+
+2. Install dependencies:
+
+```bash
+pip install --upgrade pip
+pip install -r requirements.txt
+```
+
+3. Run the app:
+
+```bash
+streamlit run streamlit_app.py
+```
+
+Open http://localhost:8501 in your browser.
+
+Alternative: pipx
+
+```bash
+brew install pipx
+pipx install streamlit
+streamlit run streamlit_app.py
+```
+
+Deploy to Streamlit Community Cloud
+- Push this repo to GitHub.
+- Go to https://streamlit.io/cloud and follow the steps to deploy a new app from your GitHub repo.
+- Ensure `requirements.txt` is present in the repo root.
+
+Notes
+- The uploader accepts CSV/TXT/Excel files. The app expects first two columns to be Symbol and Company name and remaining columns numeric betas.
+- If you upload CSV, the app returns a single CSV containing transformed betas. If you upload Excel, the app returns a single-sheet Excel file containing transformed betas.
